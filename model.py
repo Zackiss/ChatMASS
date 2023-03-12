@@ -18,20 +18,22 @@ class Model(nn.Module):
             "static": []
         }
         self.pipeline = nn.Sequential(*assigned_blocks)
-        self.dropout = nn.Dropout(config.embedding_num)
-        self.normalize = nn.LayerNorm(config.embedding_num)
-        self.decode_head = nn.Linear(config.embedding_num, config.vocab_size, bias=False)
-        self.token_embedding = nn.Embedding(num_embeddings=config.vocab_size, embedding_dim=config.embedding_num)
-        self.position_embedding = nn.Parameter(torch.zeros(1, config.block_size, config.embedding_num))
-        self.apply(self.weight_assign)
+        self.dropout = nn.Dropout(config.embedding_drop)
+        self.normalize = nn.GroupNorm(num_groups=32, num_channels=config.batch_size * config.vocab_size)
+        self.decode_head = nn.Linear(config.embedding_dim, config.vocab_size, bias=False)
+        self.token_embedding = nn.Embedding(num_embeddings=config.vocab_size, embedding_dim=config.embedding_dim)
+        self.position_embedding = nn.Parameter(torch.zeros(1, config.block_size, config.embedding_dim))
+        self.apply(self.model_preset)
 
     @staticmethod
-    def model_preset(self, module):
+    def model_preset(module):
         """set initial weight for all trainable or static layers"""
-        if isinstance(module, (nn.Linear, nn.Embedding)):
+        if isinstance(module, nn.Linear):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-            if module.bias is not None and isinstance(module, nn.Linear):
+            if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
         elif isinstance(module, nn.LayerNorm):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
@@ -46,7 +48,7 @@ class Model(nn.Module):
                 if parameter_name.endswith('bias'):
                     # all biases will not be decayed
                     self.train_passport["static"].append(fpn)
-                elif parameter_name.endswith('weight') and isinstance(module, (torch.nn.LayerNorm, torch.nn.Embedding)):
+                elif parameter_name.endswith('weight') and isinstance(module, (torch.nn.LayerNorm, torch.nn.Embedding,)):
                     # weights of blacklist modules will NOT be weight decayed
                     self.train_passport["static"].append(fpn)
                 elif parameter_name.endswith('weight') and isinstance(module, (torch.nn.Linear,)):
@@ -56,12 +58,16 @@ class Model(nn.Module):
 
     def optimize(self):
         """generate optimizer of parameters"""
-        optim_groups = [
-            {"params": [self.param_dict[pn] for pn in sorted(self.train_passport["static"])],
-             "weight_decay": self.config.weight_decay},
-            {"params": [self.param_dict[pn] for pn in sorted(self.train_passport["decay"])], "weight_decay": 0.0},
-        ]
-        optimizer = torch.optim.AdamW(optim_groups, lr=self.config.learning_rate, betas=self.config.train_betas)
+        optimizer = torch.optim.AdamW([
+            {
+                "params": [self.param_dict[pn] for pn in sorted(self.train_passport["static"])],
+                "weight_decay": self.config.weight_decay
+            },
+            {
+                "params": [self.param_dict[pn] for pn in sorted(self.train_passport["decay"])],
+                "weight_decay": 0.0
+            },
+        ], lr=self.config.learning_rate, betas=(0.9, 0.95))
         return optimizer
 
     def forward(self, inputs, targets=None):
@@ -78,7 +84,7 @@ class Model(nn.Module):
                 )
             )
         )
-        loss = cross_entropy(logit.view(-1, logit.size(-1), targets.view(-1))) if targets is not None else None
+        loss = cross_entropy(logit.view(-1, logit.size(-1)), targets.view(-1)) if targets is not None else None
         return logit, loss
 
     @torch.no_grad()
