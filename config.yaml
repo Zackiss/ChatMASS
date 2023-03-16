@@ -1,0 +1,35 @@
+# depth of blocks in encoder and decoder
+layer_num: 15
+# number of heads in multi-head self-attention
+head_num: 13
+# dimension of word embeddings
+embedding_dim: 280
+# apply word cut on input, may increase computation costs and delay
+tokenization: false
+# break the word cut job into pieces
+token_batch: 5
+# length of input sentence per token unit
+block_size: 128
+# Dropout probability, preventing over-tune
+embedding_drop: 0.05
+attention_drop: 0.1
+resid_drop: 0.05
+# choose the running device, 'auto', 'cuda', 'cpu'
+device: auto
+# how many workers when reading dataset
+num_workers: 4
+# how many samples are taken when reading dataset
+# normally set to be aliquot by how many samples in dataset
+batch_size: 64
+# max-depth of training
+max_iters: 5000
+# number of epoch, times that model being trained with the whole train set
+epoch: 3
+# learning rate in training, too huge may cause loss divergence
+learning_rate: 6.0e-3
+# how strong the weight will decay when training
+weight_decay: 0.1
+# update loss only after certain steps of gradient accumulations
+# will decrease the computation complexity, set 0 to diable
+gradient_accumulation_steps: 5
+grad_norm_clip: 1.0

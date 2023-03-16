@@ -1,23 +1,28 @@
 import torch
 import torch.nn as nn
-from Layers.block import Block
+from layers.encode_block import Block as EncoderBlock
+from layers.decode_block import Block as DecoderBlock
 from torch.nn.functional import cross_entropy, softmax
 
 
 class Model(nn.Module):
     """the main model implementation"""
+
     def __init__(self, config):
         super(Model, self).__init__()
         self.config = config
         # main structure of model: several blocks, one linear normal and one linear to assign probability
-        assigned_blocks = [Block(config)
-                           for _ in range(config.layer_num)]
+        assigned_encoder_blocks = [EncoderBlock(config)
+                                   for _ in range(config.layer_num)]
+        assigned_decoder_blocks = [DecoderBlock(config)
+                                   for _ in range(config.layer_num)]
         self.param_dict = {}
         self.train_passport = {
             "decay": [],
             "static": []
         }
-        self.pipeline = nn.Sequential(*assigned_blocks)
+        self.encoder_pipeline = nn.Sequential(*assigned_encoder_blocks)
+        self.decoder_pipeline = nn.Sequential(*assigned_decoder_blocks)
         self.dropout = nn.Dropout(config.embedding_drop)
         self.normalize = nn.GroupNorm(num_groups=32, num_channels=config.batch_size * config.vocab_size)
         self.decode_head = nn.Linear(config.embedding_dim, config.vocab_size, bias=False)
@@ -34,7 +39,7 @@ class Model(nn.Module):
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-        elif isinstance(module, nn.LayerNorm):
+        elif isinstance(module, nn.LayerNorm) or isinstance(module, nn.GroupNorm):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
 
@@ -48,7 +53,8 @@ class Model(nn.Module):
                 if parameter_name.endswith('bias'):
                     # all biases will not be decayed
                     self.train_passport["static"].append(fpn)
-                elif parameter_name.endswith('weight') and isinstance(module, (torch.nn.LayerNorm, torch.nn.Embedding,)):
+                elif parameter_name.endswith('weight') and isinstance(module,
+                                                                      (torch.nn.LayerNorm, torch.nn.Embedding,)):
                     # weights of blacklist modules will NOT be weight decayed
                     self.train_passport["static"].append(fpn)
                 elif parameter_name.endswith('weight') and isinstance(module, (torch.nn.Linear,)):
@@ -73,17 +79,31 @@ class Model(nn.Module):
     def forward(self, inputs, targets=None):
         """the forward process of model"""
         # embedding of input sequences
-        token_embeddings = self.token_embedding(inputs)
-        position_embeddings = self.position_embedding[:, :inputs.size(1), :]
-        embeddings = token_embeddings + position_embeddings
-        # forward procedures of model
+        inputs_token_embeddings = self.token_embedding(inputs)
+        inputs_position_embeddings = self.position_embedding[:, :inputs.size(1), :]
+        inputs_embeddings = inputs_token_embeddings + inputs_position_embeddings
+
+        targets_token_embeddings = self.token_embedding(inputs)
+        targets_position_embeddings = self.position_embedding[:, :inputs.size(1), :]
+        targets_embeddings = targets_token_embeddings + targets_position_embeddings
+
+        # forward procedures of encoder
+        encoder_output = self.normalize(
+            self.encoder_pipeline(
+                self.dropout(inputs_embeddings)
+            )
+        )
+        
+        # forward procedures of decoder
         logit = self.decode_head(
             self.normalize(
-                self.pipeline(
-                    self.dropout(embeddings)
+                self.decoder_pipeline(
+                    self.dropout(encoder_output),
+                    targets_embeddings
                 )
             )
         )
+
         loss = cross_entropy(logit.view(-1, logit.size(-1)), targets.view(-1)) if targets is not None else None
         return logit, loss
 
