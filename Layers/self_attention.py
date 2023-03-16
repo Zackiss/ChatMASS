@@ -1,16 +1,16 @@
 import torch
-import copy
 import torch.nn as nn
 import numpy as np
 
 
 class SelfAttention(nn.Module):
+    """"""
     def __init__(self, config, dropout=0.1):
         super(SelfAttention, self).__init__()
         # get dimension of word vectors
         assert config.dim_model % config.head_num == 0
         self.config = config
-        self.to("cuda")
+        self.to(self.config.device)
         dropout = config.attention_drop
         self.dim_k = config.dim_model // config.head_num
         # specify number of heads
@@ -27,7 +27,8 @@ class SelfAttention(nn.Module):
         # define dropout method
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, norm_embed):
+    def forward(self, norm_embed: torch.Tensor):
+        """"""
         query, key, value = norm_embed, norm_embed, norm_embed
         batch_size, seq_length, embed_dim = query.size()
         assert batch_size > 0

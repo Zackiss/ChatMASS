@@ -4,3 +4,5 @@
 
 On Implementing
 --
+https://zhuanlan.zhihu.com/p/432560133
+https://github.com/eggplants/deepl-cli
