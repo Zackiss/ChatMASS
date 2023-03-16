@@ -41,8 +41,8 @@ class ChatDataset(Dataset):
         dialog = self.session.query(self.dialogue_table).filter(self.dialogue_table.id == index).first()
         logging.debug("data fetch: " + str(dialog))
         chat = dialog[index: index + self.block_size + 1]
-        x = torch.tensor(chat[:-1], dtype=torch.long)
-        y = torch.tensor(chat[1:], dtype=torch.long)
+        x = torch.tensor(chat[1:], dtype=torch.long)
+        y = torch.tensor(chat[:-1], dtype=torch.long)
         return x, y
 
     def __len__(self):
