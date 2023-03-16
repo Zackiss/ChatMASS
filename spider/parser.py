@@ -49,7 +49,7 @@ for i in range(last, len(data)):
     session.add(Final_result)
     session.commit()
     with open("process.save", mode="w", encoding="utf-8") as process:
-        process.write(str(i))
+        process.write(str(i + 1))
 
 session.close()
 
