@@ -1,5 +1,5 @@
-import deepl
 import os.path
+import requests
 from sqlalchemy import create_engine, Column, String, Integer
 from sqlalchemy.orm import sessionmaker, declarative_base
 
@@ -12,6 +12,7 @@ last = 0
 with open("process.save", mode="r", encoding="utf-8") as process:
     last = int(process.read())
 
+
 class Dialogue(Base):
     """the chart that store multi-turn dialogues"""
     __tablename__ = 'dialogue'
@@ -19,9 +20,6 @@ class Dialogue(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     target = Column(String)
 
-# auth_key = "f63c02c5-f056-..."  # Replace with your key
-# translator = deepl.Translator(auth_key)
-translator = deepl.DeepLCLI("en", "zh")
 
 name = "dialogues_train"
 directory = os.path.dirname(__file__) + "/../trainset/raw/dialogue/eng_dia/train/"
@@ -41,10 +39,22 @@ for i in range(last, len(data)):
     for text in line:
         if text.strip() == "":
             break
-        text = translator.translate(text)
+        url = "https://api.niutrans.com/"
+        form = {"data": {
+            "to": "zh",
+            "error_code": "13002",
+            "from": "en",
+            "error_msg": "apikey is empty",
+            "src_text": f"{text}",
+            "apikey": "66141b9c945f101ab1d6479d7549078f"
+        }
+        }
+        text = requests.post(url, data=form).content
+        print(text)
+        exit()
         result = result + text + divide_mark
-        
-    Final_result = Dialogue(target = result)
+
+    Final_result = Dialogue(target=result)
     Final_result.__table__.create(engine, checkfirst=True)
     session.add(Final_result)
     session.commit()
@@ -54,4 +64,3 @@ for i in range(last, len(data)):
 session.close()
 
 # with open(directory + 'translated'+ name +'.txt', 'w') as sf:
-    
