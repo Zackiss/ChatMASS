@@ -4,4 +4,4 @@
 
 ## On Implementation
 1. Will provide the Chinese pre-trained model in future.
-2. Doing research on emotion-based dyeing diffusion algorithm.
+2. Researching on emotion-based dyeing diffusion algorithm.
