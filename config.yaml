@@ -1,11 +1,17 @@
 # depth of blocks in encoder and decoder
-layer_num: 15
+layer_num: 5
 # number of heads in multi-head self-attention
-head_num: 13
+head_num: 12
 # dimension of word embeddings
 embedding_dim: 280
+# max vocabulary size
+max_vocab_size: 7.0e+4
+# use custom dictionary of vocabulary to do tokenization, faster than normal
+use_custom_dict: true
 # apply word cut on input, may increase computation costs and delay
 tokenization: false
+# use deep learning model to apply word cut on tokenization, may increase computation costs
+deepl_tokenize: false
 # break the word cut job into pieces
 token_batch: 5
 # length of input sentence per token unit
@@ -16,12 +22,16 @@ attention_drop: 0.1
 resid_drop: 0.05
 # choose the running device, 'auto', 'cuda', 'cpu'
 device: auto
+# max number of trainset loading,set to 0 for disable
+max_trainset_num: 1
 # how many workers when reading dataset
-num_workers: 4
+num_workers: 0
+# how many steps will apply on per-sample
+steps_per_sample: 3
 # how many samples are taken when reading dataset
 # normally set to be aliquot by how many samples in dataset
 batch_size: 64
-# max-depth of training
+# max-depth of training one batch
 max_iters: 5000
 # number of epoch, times that model being trained with the whole train set
 epoch: 3

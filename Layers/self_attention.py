@@ -27,9 +27,12 @@ class SelfAttention(nn.Module):
         # define dropout method
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, norm_embed: torch.Tensor):
+    def forward(self, norm_embed: torch.Tensor, query=None, key=None, value=None):
         """"""
-        query, key, value = norm_embed, norm_embed, norm_embed
+        query = norm_embed if query is None else query
+        key = norm_embed if key is None else key
+        value = norm_embed if value is None else value
+
         batch_size, seq_length, embed_dim = query.size()
         assert batch_size > 0
         assert seq_length <= self.config.block_size

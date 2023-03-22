@@ -1,4 +1,6 @@
 import os.path
+import time
+
 import requests
 from sqlalchemy import create_engine, Column, String, Integer
 from sqlalchemy.orm import sessionmaker, declarative_base
@@ -30,6 +32,11 @@ with open(directory + name + ".txt", mode="r", encoding="utf-8") as f:
 session = Session()
 data = data.split("\n")
 result = []
+header = {
+    "content-length": "138",
+    "content-type": "text/html; charset=UTF-8"
+}
+url = "https://api.niutrans.com/NiuTransServer/translation"
 
 for i in range(last, len(data)):
     line = data[i]
@@ -39,19 +46,24 @@ for i in range(last, len(data)):
     for text in line:
         if text.strip() == "":
             break
-        url = "https://api.niutrans.com/"
-        form = {"data": {
-            "to": "zh",
-            "error_code": "13002",
-            "from": "en",
-            "error_msg": "apikey is empty",
+        form = {
             "src_text": f"{text}",
+            "from": "en",
+            "to": "zh",
+            "dicNo": "",
+            "memoryNo": "",
             "apikey": "66141b9c945f101ab1d6479d7549078f"
         }
-        }
-        text = requests.post(url, data=form).content
-        print(text)
-        exit()
+        _pass = True
+        while _pass:
+            try:
+                text = eval(requests.post(url=url, headers=header, data=form).text)["tgt_text"]
+                _pass = False
+            except SyntaxError:
+                time.sleep(2)
+                _pass = True
+            except KeyError:
+                print(eval(requests.post(url=url, headers=header, data=form).text))
         result = result + text + divide_mark
 
     Final_result = Dialogue(target=result)

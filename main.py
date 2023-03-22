@@ -11,10 +11,12 @@ import logging
 if __name__ == "__main__":
     """config init"""
     logging.basicConfig(filename="report.log", level=logging.DEBUG)
+    open("report.log", "w").close()
     conf = Config(r"config.yaml")
 
     """basic model setup"""
-    dataset = ChatDataset([], conf)
+    trainset_path = ["trainset/" + p for p in os.listdir("trainset")]
+    dataset = ChatDataset(trainset_path, conf)
     conf.vocab_size = dataset.vocab_size
     conf.embedding_dim = int(conf.embedding_dim / conf.head_num) * conf.head_num
     conf.dim_model = conf.embedding_dim
@@ -37,4 +39,4 @@ if __name__ == "__main__":
     for word in completion:
         print(word, end="")
         time.sleep(0.1)
-    dataset.session.close()
+    # dataset.session.close()
