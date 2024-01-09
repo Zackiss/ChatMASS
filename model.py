@@ -122,12 +122,6 @@ class Model(nn.Module):
 
     @torch.no_grad()
     def generate(self, ids, max_new_tokens, temperature=0.75, do_sample=False, top_k=None):
-        """
-        From Karpathy, 3/1/2023
-        Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
-        the sequence max_new_tokens times, feeding the predictions back into the model each time.
-        Most likely you'll want to make sure to be in model.eval() mode of operation for this.
-        """
         index = ids
         for _ in range(max_new_tokens):
             # if the sequence context is too long, we must crop it at block_size
